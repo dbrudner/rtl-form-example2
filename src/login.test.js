@@ -1,48 +1,32 @@
 import React from 'react';
-import { render, fireEvent, wait } from '@testing-library/react';
-import { Login } from './login';
-
-const mockResponse = {
-	user: '1',
-	pass: '1'
-};
-
-global.fetch = jest.fn(() => {
-	return new Promise(() => ({
-		json: () => mockResponse,
-		ok: true
-	}));
-});
+import Login from './login';
+import { render, fireEvent, waitForElement } from '@testing-library/react';
 
 describe('Login', () => {
-	let Subject;
-	const updateCurrentUser = jest.fn();
-
-	beforeEach(() => {
-		Subject = render(<Login updateCurrentUser={updateCurrentUser} />);
-	});
-
-	it('should render', () => {
-		expect(Subject).toBeTruthy();
-	});
-
-	it('should login with correct user and pass', () => {
-		const { getByLabelText, getByText } = Subject;
-
-		const userInput = getByLabelText('Username');
-		const passwordInput = getByLabelText('Pass');
-
-		fireEvent.change(userInput, { target: '1' });
-		fireEvent.change(passwordInput, { target: '1' });
-
-		const loginButton = getByText('Login');
-
-		fireEvent.click(loginButton);
-
-		expect(fetch).toHaveBeenCalled();
-
-		wait(() => {
-			expect(updateCurrentUser).toHaveBeenCalledWith(mockResponse);
+	jest.spyOn(window, 'fetch').mockImplementationOnce(() => {
+		return Promise.resolve({
+			json: () => Promise.resolve({})
 		});
+	});
+
+	let wrapper;
+	beforeEach(() => {
+		wrapper = render(<Login />);
+	});
+
+	it('should display an error message after logging in', async () => {
+		const userInput = wrapper.getByLabelText('Username');
+		const passwordInput = wrapper.getByLabelText('Pass');
+		const button = wrapper.getByText('Login');
+
+		fireEvent.change(userInput, { target: { value: 'dave' } });
+		fireEvent.change(passwordInput, { target: { value: 'password' } });
+		fireEvent.click(button);
+
+		const successMessage = await waitForElement(() =>
+			wrapper.getByText('You are logged in')
+		);
+
+		expect(successMessage).toBeTruthy();
 	});
 });
